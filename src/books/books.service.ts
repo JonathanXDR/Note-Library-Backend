@@ -10,7 +10,6 @@ export class BooksService {
     const book = await this.prisma.book.findUniqueOrThrow({
       where: { id },
     });
-    return book;
   }
 
   async findMany(params: {
