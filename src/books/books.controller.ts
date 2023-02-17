@@ -30,7 +30,7 @@ export class BooksController {
   @ApiOkResponse({ type: BookEntity })
   async getBook(@Param('id', ParseIntPipe) id: number): Promise<BookModel> {
     try {
-      return await this.booksService.findOne(id);
+      return this.booksService.findOne(id);
     } catch (error) {
       throw new NotFoundException();
     }
