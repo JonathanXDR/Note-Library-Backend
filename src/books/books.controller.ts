@@ -49,7 +49,7 @@ export class BooksController {
     @Body() request: BookRequest,
   ): Promise<BookModel> {
     try {
-      return await this.booksService.updateBook({
+      return this.booksService.updateBook({
         where: { id: id },
         data: request,
       });
