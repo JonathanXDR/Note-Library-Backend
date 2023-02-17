@@ -11,7 +11,7 @@ export class BooksService {
       where: { id },
     });
     if (!book) {
-      throw new NotFoundException();
+      throw new NotFoundException('Book not found');
     }
     return book;
   }
@@ -44,10 +44,6 @@ export class BooksService {
     data: Prisma.BookUpdateInput;
   }): Promise<Book> {
     const { data, where } = params;
-    const book = await this.findOne(params.where.id);
-    if (!book) {
-      throw new NotFoundException();
-    }
     return this.prisma.book.update({
       data,
       where,
@@ -55,10 +51,6 @@ export class BooksService {
   }
 
   async deleteBook(where: Prisma.BookWhereUniqueInput): Promise<Book> {
-    const book = await this.findOne(where.id);
-    if (!book) {
-      throw new NotFoundException();
-    }
     return this.prisma.book.delete({
       where,
     });
