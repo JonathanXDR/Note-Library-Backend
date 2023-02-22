@@ -1,28 +1,22 @@
-import {
-  IsDefined,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsDefined, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class BookRequest {
-  @IsOptional()
-  @IsNumber()
-  id: number;
-
+  @ApiProperty()
   @IsDefined()
-  @IsString()
   @IsNotEmpty()
+  @IsString()
   title: string;
 
+  @ApiProperty()
   @IsDefined()
-  @IsNumber()
   @IsNotEmpty()
+  @IsNumber()
   releaseYear: number;
 
+  @ApiProperty()
   @IsDefined()
-  @IsString()
   @IsNotEmpty()
+  @IsString()
   author: string;
 }

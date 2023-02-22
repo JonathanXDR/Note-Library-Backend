@@ -1,3 +1,5 @@
+import { UseGuards, Request } from '@nestjs/common';
+import { JwtAuthGuard } from './../auth/jwt-auth.guard';
 import { BookRequest } from './dto/book.request';
 import {
   Controller,
@@ -11,10 +13,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { BooksService } from './books.service';
-import { Book as BookModel } from '@prisma/client';
+import { Book } from '@prisma/client';
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { BookEntity } from './book.entity';
 
+@UseGuards(JwtAuthGuard)
 @Controller('books')
 @ApiTags('books')
 export class BooksController {
@@ -22,13 +25,16 @@ export class BooksController {
 
   @Get()
   @ApiOkResponse({ type: [BookEntity] })
-  async getAllBooks(): Promise<BookModel[]> {
+  async getAllBooks(@Request() req): Promise<Book[]> {
     return this.booksService.findMany({});
   }
 
-  @Get(':id')
+  @Get('/:id')
   @ApiOkResponse({ type: BookEntity })
-  async getBook(@Param('id', ParseIntPipe) id: number): Promise<BookModel> {
+  async getBook(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<Book> {
     try {
       return this.booksService.findOne(id);
     } catch (error) {
@@ -38,19 +44,23 @@ export class BooksController {
 
   @Post()
   @ApiCreatedResponse({ type: BookEntity })
-  async createBook(@Body() request: BookRequest): Promise<BookModel> {
+  async createBook(
+    @Request() req,
+    @Body() request: BookRequest,
+  ): Promise<Book> {
     return this.booksService.createBook(request);
   }
 
-  @Put(':id')
+  @Put('/:id')
   @ApiOkResponse({ type: BookEntity })
   async updateBook(
+    @Request() req,
     @Param('id', ParseIntPipe) id: number,
     @Body() request: BookRequest,
-  ): Promise<BookModel> {
+  ): Promise<Book> {
     try {
       return this.booksService.updateBook({
-        where: { id: id },
+        where: { id },
         data: request,
       });
     } catch (error) {
@@ -58,9 +68,9 @@ export class BooksController {
     }
   }
 
-  @Delete(':id')
+  @Delete('/:id')
   @ApiOkResponse({ type: BookEntity })
-  async deleteBook(@Param('id', ParseIntPipe) id: number): Promise<BookModel> {
-    return this.booksService.deleteBook({ id: id });
+  async deleteBook(@Param('id', ParseIntPipe) id: number): Promise<Book> {
+    return this.booksService.deleteBook({ id });
   }
 }
