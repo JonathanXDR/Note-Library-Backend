@@ -51,7 +51,7 @@ export class BooksController {
     return this.booksService.createBook(request);
   }
 
-  @Put(':id')
+  @Put('/:id')
   @ApiOkResponse({ type: BookEntity })
   async updateBook(
     @Request() req,
