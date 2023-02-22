@@ -29,7 +29,7 @@ export class BooksController {
     return this.booksService.findMany({});
   }
 
-  @Get(':id')
+  @Get('/:id')
   @ApiOkResponse({ type: BookEntity })
   async getBook(
     @Request() req,
