@@ -68,7 +68,7 @@ export class BooksController {
     }
   }
 
-  @Delete(':id')
+  @Delete('/:id')
   @ApiOkResponse({ type: BookEntity })
   async deleteBook(@Param('id', ParseIntPipe) id: number): Promise<Book> {
     return this.booksService.deleteBook({ id });
