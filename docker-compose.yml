@@ -5,7 +5,7 @@ services:
     ports:
       - '3000:3000'
     environment:
-      DATABASE_URL: mysql://root:1234@db:3306/mariadb
+      DATABASE_URL: mysql://root:1234@database:3306/mariadb
       JWT_SECRET: IQFAYlggMGFsy0bSSYZrpUao182MxIfv
     depends_on:
       - database
