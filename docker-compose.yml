@@ -1,7 +1,10 @@
 version: '3'
 services:
   backend:
-    build: .
+    build:
+      context: .
+      args:
+        DATABASE_URL: mysql://root:1234@database:3306/mariadb
     ports:
       - '3000:3000'
     environment:
