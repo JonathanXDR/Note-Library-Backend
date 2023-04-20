@@ -1,8 +1,10 @@
+# Set the arguments
+ARG DATABASE_URL
+
 # Use an official Node runtime as the base image
 FROM node:18.16.0
 
 # Set the environment variables
-ARG DATABASE_URL
 ENV DATABASE_URL=$DATABASE_URL
 
 # Set the working directory in the container
