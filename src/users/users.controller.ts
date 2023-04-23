@@ -27,11 +27,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @ApiOkResponse({ type: UserEntity })
   async getCurrentUser(@CurrentUser() user: User): Promise<User> {
-    try {
-      return this.usersService.findOneById(user.id);
-    } catch (error) {
-      throw new NotFoundException();
-    }
+    return this.usersService.findOneById(user.id);
   }
 
   @Get('/:id')
