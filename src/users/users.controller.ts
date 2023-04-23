@@ -1,4 +1,12 @@
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  NotFoundException,
+  UseGuards,
+} from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from 'src/decorators/current-user.decorator';
 import { UsersService } from './users.service';
 import { User } from '@prisma/client';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
@@ -13,6 +21,17 @@ export class UsersController {
   @ApiOkResponse({ type: [UserEntity] })
   async getAllUsers(): Promise<User[]> {
     return this.usersService.findMany();
+  }
+
+  @Get('/me')
+  @UseGuards(JwtAuthGuard)
+  @ApiOkResponse({ type: UserEntity })
+  async getCurrentUser(@CurrentUser() user: User): Promise<User> {
+    try {
+      return this.usersService.findOneById(user.id);
+    } catch (error) {
+      throw new NotFoundException();
+    }
   }
 
   @Get('/:id')
