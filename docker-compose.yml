@@ -2,7 +2,6 @@ version: '3'
 services:
   backend:
     build:
-      context: .
       args:
         - DATABASE_URL=mysql://root:1234@database:3306/mariadb
     ports:
@@ -18,7 +17,6 @@ services:
     ports:
       - '53306:3306'
     environment:
-      MYSQL_ROOT_PASSWORD: 1234
-      MYSQL_DATABASE: mariadb
-      MYSQL_USER: root
-      MYSQL_PASSWORD: 1234
+      MARIADB_ROOT_USER: root
+      MARIADB_ROOT_PASSWORD: 1234
+      MARIADB_DATABASE: mariadb
