@@ -1,25 +1,27 @@
 import { ApiTags } from '@nestjs/swagger';
-import { Controller, Get, Request, Post, UseGuards } from '@nestjs/common';
-import { LocalAuthGuard } from './auth/local-auth.guard';
+import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { LocalAuthGuard } from './auth/guards/local-auth.guard';
 import { AuthService } from './auth/auth.service';
+import { CurrentUser } from './decorators/current-user.decorator';
 import { AppService } from './app.service';
 
 @Controller()
 export class AppController {
   constructor(
-    private readonly appService: AppService,
     private readonly authService: AuthService,
+    private readonly appService: AppService,
   ) {}
 
   @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  @ApiTags('default')
+  getWelcome(): string {
+    return this.appService.getWelcome();
   }
 
   @UseGuards(LocalAuthGuard)
   @Post('/auth/login')
   @ApiTags('authentication')
-  async login(@Request() req) {
-    return this.authService.login(req.user);
+  async login(@CurrentUser() user) {
+    return this.authService.login(user);
   }
 }
