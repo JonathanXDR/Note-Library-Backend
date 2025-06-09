@@ -14,7 +14,7 @@ export class CreateNoteCollectionDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: { value: string }) => value?.trim())
   title: string;
 
   @ApiProperty({

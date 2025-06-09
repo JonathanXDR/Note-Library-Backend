@@ -14,7 +14,6 @@ export class AppController {
   ) {}
 
   @Get()
-  @ApiTags('default')
   getHello(): string {
     return this.appService.getHello();
   }
@@ -22,7 +21,7 @@ export class AppController {
   @UseGuards(LocalAuthGuard)
   @Post('/auth/login')
   @ApiTags('authentication')
-  async login(@CurrentUser() user: User) {
+  login(@CurrentUser() user: User) {
     return this.authService.login(user);
   }
 }

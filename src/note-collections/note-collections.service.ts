@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { NoteCollection } from 'generated/prisma';
+import { NoteCollection, Prisma } from 'generated/prisma';
 import { PrismaService } from 'src/prisma.service';
 import { CreateNoteCollectionDto } from './dto/create-note-collection.dto';
 import { UpdateNoteCollectionDto } from './dto/update-note-collection.dto';
@@ -8,7 +8,7 @@ import { UpdateNoteCollectionDto } from './dto/update-note-collection.dto';
 export class NoteCollectionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAllByUserId(userId: string): Promise<NoteCollection[]> {
+  findAllByUserId(userId: string): Promise<NoteCollection[]> {
     return this.prisma.noteCollection.findMany({
       where: { userId },
       include: { notes: true },
@@ -43,7 +43,9 @@ export class NoteCollectionsService {
       const collection = await tx.noteCollection.create({
         data: {
           ...collectionData,
-          userId,
+          user: {
+            connect: { id: userId },
+          },
         },
         include: { notes: true },
       });
@@ -54,10 +56,12 @@ export class NoteCollectionsService {
           data: { noteCollectionId: collection.id },
         });
 
-        return tx.noteCollection.findUnique({
+        const updatedCollection = await tx.noteCollection.findUnique({
           where: { id: collection.id },
           include: { notes: true },
         });
+
+        return updatedCollection || collection;
       }
 
       return collection;
@@ -78,9 +82,9 @@ export class NoteCollectionsService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      const collection = await tx.noteCollection.update({
+      await tx.noteCollection.update({
         where: { id },
-        data: collectionData,
+        data: collectionData as Prisma.NoteCollectionUpdateInput,
       });
 
       if (noteIds !== undefined) {
@@ -97,10 +101,16 @@ export class NoteCollectionsService {
         }
       }
 
-      return tx.noteCollection.findUnique({
+      const updatedCollection = await tx.noteCollection.findUnique({
         where: { id },
         include: { notes: true },
       });
+
+      if (!updatedCollection) {
+        throw new NotFoundException('Note collection not found after update');
+      }
+
+      return updatedCollection;
     });
   }
 

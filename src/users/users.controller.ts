@@ -21,9 +21,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { User } from 'generated/prisma';
-
+import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RoleGuard } from '../auth/guards/role.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { Roles } from '../decorators/roles.decorator';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -38,7 +37,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard, RoleGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all users (Admin only)' })
@@ -48,7 +47,7 @@ export class UsersController {
     type: [UserEntity],
   })
   @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
-  async findAll(@CurrentUser() user: User): Promise<UserEntity[]> {
+  async findAll(): Promise<UserEntity[]> {
     const users = await this.usersService.findAll();
     return users.map((user) => new UserEntity(user));
   }
@@ -68,7 +67,7 @@ export class UsersController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard, RoleGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user by ID (Admin only)' })
@@ -119,7 +118,7 @@ export class UsersController {
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard, RoleGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update user by ID (Admin only)' })
@@ -155,7 +154,7 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RoleGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete user by ID (Admin only)' })

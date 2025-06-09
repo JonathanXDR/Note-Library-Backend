@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { User } from 'generated/prisma';
+import { Prisma, User } from 'generated/prisma';
 import { PrismaService } from 'src/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -12,7 +12,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(): Promise<User[]> {
+  findAll(): Promise<User[]> {
     return this.prisma.user.findMany({
       select: {
         id: true,
@@ -24,11 +24,11 @@ export class UsersService {
         role: true,
         password: false,
       },
-    });
+    }) as Promise<User[]>;
   }
 
   async findById(id: string): Promise<User> {
-    const user = await this.prisma.user.findUnique({
+    const user = (await this.prisma.user.findUnique({
       where: { id },
       select: {
         id: true,
@@ -40,7 +40,7 @@ export class UsersService {
         role: true,
         password: false,
       },
-    });
+    })) as User | null;
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
@@ -72,11 +72,11 @@ export class UsersService {
       );
     }
 
-    const user = await this.prisma.user.create({
+    const user = (await this.prisma.user.create({
       data: {
         ...createUserDto,
         role: 'user',
-      },
+      } as Prisma.UserCreateInput,
       select: {
         id: true,
         username: true,
@@ -87,7 +87,7 @@ export class UsersService {
         role: true,
         password: false,
       },
-    });
+    })) as User;
 
     return user;
   }
@@ -95,9 +95,9 @@ export class UsersService {
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     await this.findById(id);
 
-    const user = await this.prisma.user.update({
+    const user = (await this.prisma.user.update({
       where: { id },
-      data: updateUserDto,
+      data: updateUserDto as Prisma.UserUpdateInput,
       select: {
         id: true,
         username: true,
@@ -108,7 +108,7 @@ export class UsersService {
         role: true,
         password: false,
       },
-    });
+    })) as User;
 
     return user;
   }
@@ -116,7 +116,7 @@ export class UsersService {
   async remove(id: string): Promise<User> {
     await this.findById(id);
 
-    const user = await this.prisma.user.delete({
+    const user = (await this.prisma.user.delete({
       where: { id },
       select: {
         id: true,
@@ -128,7 +128,7 @@ export class UsersService {
         role: true,
         password: false,
       },
-    });
+    })) as User;
 
     return user;
   }

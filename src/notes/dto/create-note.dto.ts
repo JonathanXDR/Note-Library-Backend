@@ -18,13 +18,13 @@ export class CreateNoteDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: { value: string }) => value?.trim())
   title?: string;
 
   @ApiProperty({ example: 'This is the content of my note' })
   @IsString()
   @IsNotEmpty()
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: { value: string }) => value?.trim())
   description: string;
 
   @ApiProperty({ example: 'collection-uuid', required: false })

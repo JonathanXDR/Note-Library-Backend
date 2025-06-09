@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Note } from 'generated/prisma';
+import { Note, Prisma } from 'generated/prisma';
 import { PrismaService } from 'src/prisma.service';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
@@ -8,7 +8,7 @@ import { UpdateNoteDto } from './dto/update-note.dto';
 export class NotesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAllByUserId(userId: string): Promise<Note[]> {
+  findAllByUserId(userId: string): Promise<Note[]> {
     return this.prisma.note.findMany({
       where: { userId },
       orderBy: { id: 'desc' },
@@ -38,8 +38,10 @@ export class NotesService {
     return this.prisma.note.create({
       data: {
         ...createNoteDto,
-        userId,
-      },
+        user: {
+          connect: { id: userId },
+        },
+      } as Prisma.NoteCreateInput,
     });
   }
 
@@ -59,7 +61,7 @@ export class NotesService {
 
     return this.prisma.note.update({
       where: { id },
-      data: updateNoteDto,
+      data: updateNoteDto as Prisma.NoteUpdateInput,
     });
   }
 

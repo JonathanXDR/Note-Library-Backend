@@ -21,7 +21,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { User } from 'generated/prisma';
-
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { CreateNoteCollectionDto } from './dto/create-note-collection.dto';
