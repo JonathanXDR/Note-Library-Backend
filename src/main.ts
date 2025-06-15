@@ -7,21 +7,17 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Get ConfigService
   const configService = app.get(ConfigService);
 
-  // Enable CORS
   app.enableCors({
     origin: configService.get<string>('CORS_ORIGIN', '*'),
     credentials: true,
   });
 
-  // Global prefix
   app.setGlobalPrefix('api', {
     exclude: ['health'],
   });
 
-  // Global pipes
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -33,10 +29,8 @@ async function bootstrap() {
     }),
   );
 
-  // Global interceptors
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
-  // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle('Notes API')
     .setDescription('The Notes API description')
@@ -53,7 +47,5 @@ async function bootstrap() {
 
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
-
-  console.log(`Application is running on: ${await app.getUrl()}`);
 }
-bootstrap();
+void bootstrap();

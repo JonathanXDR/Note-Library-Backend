@@ -3,8 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Note, Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
+import { Note, Prisma } from 'generated/prisma';
+import { PrismaService } from 'src/prisma.service';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
 
@@ -73,7 +73,7 @@ export class NotesService {
     userId: string,
     updateNoteDto: UpdateNoteDto,
   ): Promise<Note> {
-    await this.findOne(id, userId); // Check if note exists and belongs to user
+    await this.findOne(id, userId);
 
     const { noteCollectionId, ...data } = updateNoteDto;
 
@@ -95,7 +95,7 @@ export class NotesService {
   }
 
   async remove(id: string, userId: string): Promise<Note> {
-    await this.findOne(id, userId); // Check if note exists and belongs to user
+    await this.findOne(id, userId);
 
     return this.prisma.note.delete({
       where: { id },

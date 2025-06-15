@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Note } from '@prisma/client';
+import { Note } from 'generated/prisma';
 
 export class NoteEntity implements Note {
   @ApiProperty()

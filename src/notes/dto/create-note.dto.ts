@@ -18,7 +18,7 @@ export class CreateNoteDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: { value: string }) => value?.trim())
   title?: string;
 
   @ApiProperty({
@@ -27,7 +27,7 @@ export class CreateNoteDto {
   })
   @IsString()
   @IsNotEmpty()
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: { value: string }) => value?.trim())
   description: string;
 
   @ApiProperty({

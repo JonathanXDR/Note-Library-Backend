@@ -19,6 +19,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { User } from 'generated/prisma';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../auth/enums/role.enum';
@@ -137,11 +138,10 @@ export class UsersController {
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'User not found' })
   async remove(
-    @CurrentUser() currentUser: any,
+    @CurrentUser() currentUser: User,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<UserEntity> {
-    // Users can delete their own account, admins can delete any account
-    if (currentUser.id !== id && currentUser.role !== Role.Admin) {
+    if (currentUser.id !== id && currentUser.role !== Role.Admin.toString()) {
       throw new ForbiddenException('You can only delete your own account');
     }
 

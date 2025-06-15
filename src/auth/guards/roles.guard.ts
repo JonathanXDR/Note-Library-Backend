@@ -5,8 +5,13 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { User } from 'generated/prisma';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { Role } from '../enums/role.enum';
+
+interface RequestWithUser extends Request {
+  user?: User;
+}
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -22,13 +27,13 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const { user } = context.switchToHttp().getRequest();
+    const { user } = context.switchToHttp().getRequest<RequestWithUser>();
 
     if (!user) {
       throw new ForbiddenException('User not authenticated');
     }
 
-    const hasRole = requiredRoles.some((role) => user.role === role);
+    const hasRole = requiredRoles.some((role) => user.role === role.toString());
 
     if (!hasRole) {
       throw new ForbiddenException(

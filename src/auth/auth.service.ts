@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { User } from 'generated/prisma';
 import { UserEntity } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
@@ -18,14 +19,14 @@ export class AuthService {
     const user = await this.usersService.findByUsername(username);
 
     if (user && (await bcrypt.compare(password, user.password))) {
-      const { password, ...result } = user;
+      const { ...result } = user;
       return result;
     }
 
     return null;
   }
 
-  async login(user: any) {
+  login(user: User) {
     const payload = { username: user.username, sub: user.id, role: user.role };
 
     return {
@@ -37,7 +38,7 @@ export class AuthService {
   async register(registerDto: RegisterDto) {
     const hashedPassword = await bcrypt.hash(
       registerDto.password,
-      this.configService.get<number>('bcrypt.rounds'),
+      this.configService.get<number>('bcrypt.rounds', 10),
     );
 
     const user = await this.usersService.create({

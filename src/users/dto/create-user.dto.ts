@@ -18,7 +18,7 @@ export class CreateUserDto {
   @IsNotEmpty()
   @MinLength(3)
   @MaxLength(30)
-  @Transform(({ value }) => value?.trim().toLowerCase())
+  @Transform(({ value }: { value: string }) => value?.trim().toLowerCase())
   username: string;
 
   @ApiProperty({ example: 'password123', description: 'Password' })
@@ -32,14 +32,14 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(30)
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: { value: string }) => value?.trim())
   firstName: string;
 
   @ApiProperty({ example: 'Doe', description: 'Last name' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(30)
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: { value: string }) => value?.trim())
   lastName: string;
 
   @ApiProperty({ example: 25, description: 'Age', required: false })
