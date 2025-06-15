@@ -1,21 +1,62 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Note, Prisma } from 'generated/prisma';
-import { PrismaService } from 'src/prisma.service';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Note, Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
 
 @Injectable()
 export class NotesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {}
 
-  findAllByUserId(userId: string): Promise<Note[]> {
-    return this.prisma.note.findMany({
-      where: { userId },
-      orderBy: { id: 'desc' },
+  async create(userId: string, createNoteDto: CreateNoteDto): Promise<Note> {
+    const { noteCollectionId, ...data } = createNoteDto;
+
+    if (noteCollectionId) {
+      await this.validateNoteCollectionOwnership(noteCollectionId, userId);
+    }
+
+    return this.prisma.note.create({
+      data: {
+        ...data,
+        user: {
+          connect: { id: userId },
+        },
+        ...(noteCollectionId && {
+          NoteCollection: {
+            connect: { id: noteCollectionId },
+          },
+        }),
+      },
     });
   }
 
-  async findByIdAndUserId(id: string, userId: string): Promise<Note> {
+  async findAll(
+    userId: string,
+    params?: {
+      skip?: number;
+      take?: number;
+      where?: Prisma.NoteWhereInput;
+      orderBy?: Prisma.NoteOrderByWithRelationInput;
+    },
+  ): Promise<Note[]> {
+    const { skip, take, where, orderBy } = params || {};
+
+    return this.prisma.note.findMany({
+      skip,
+      take,
+      where: {
+        ...where,
+        userId,
+      },
+      orderBy: orderBy || { id: 'desc' },
+    });
+  }
+
+  async findOne(id: string, userId: string): Promise<Note> {
     const note = await this.prisma.note.findFirst({
       where: { id, userId },
     });
@@ -27,46 +68,34 @@ export class NotesService {
     return note;
   }
 
-  async create(userId: string, createNoteDto: CreateNoteDto): Promise<Note> {
-    if (createNoteDto.noteCollectionId) {
-      await this.validateNoteCollectionOwnership(
-        createNoteDto.noteCollectionId,
-        userId,
-      );
-    }
-
-    return this.prisma.note.create({
-      data: {
-        ...createNoteDto,
-        user: {
-          connect: { id: userId },
-        },
-      } as Prisma.NoteCreateInput,
-    });
-  }
-
   async update(
     id: string,
     userId: string,
     updateNoteDto: UpdateNoteDto,
   ): Promise<Note> {
-    await this.findByIdAndUserId(id, userId);
+    await this.findOne(id, userId); // Check if note exists and belongs to user
 
-    if (updateNoteDto.noteCollectionId) {
-      await this.validateNoteCollectionOwnership(
-        updateNoteDto.noteCollectionId,
-        userId,
-      );
+    const { noteCollectionId, ...data } = updateNoteDto;
+
+    if (noteCollectionId !== undefined) {
+      if (noteCollectionId) {
+        await this.validateNoteCollectionOwnership(noteCollectionId, userId);
+      }
     }
 
     return this.prisma.note.update({
       where: { id },
-      data: updateNoteDto as Prisma.NoteUpdateInput,
+      data: {
+        ...data,
+        ...(noteCollectionId !== undefined && {
+          noteCollectionId,
+        }),
+      },
     });
   }
 
   async remove(id: string, userId: string): Promise<Note> {
-    await this.findByIdAndUserId(id, userId);
+    await this.findOne(id, userId); // Check if note exists and belongs to user
 
     return this.prisma.note.delete({
       where: { id },
@@ -82,8 +111,8 @@ export class NotesService {
     });
 
     if (!noteCollection) {
-      throw new NotFoundException(
-        `Note collection with ID ${noteCollectionId} not found`,
+      throw new ForbiddenException(
+        'Note collection not found or you do not have permission to access it',
       );
     }
   }

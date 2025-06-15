@@ -1,20 +1,20 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Note } from 'generated/prisma';
+import { Note } from '@prisma/client';
 
 export class NoteEntity implements Note {
-  @ApiProperty({ example: 'uuid-string' })
+  @ApiProperty()
   id: string;
 
-  @ApiProperty({ example: 'My Important Note', required: false })
+  @ApiProperty({ required: false, nullable: true })
   title: string | null;
 
-  @ApiProperty({ example: 'This is the content of my note' })
+  @ApiProperty()
   description: string;
 
-  @ApiProperty({ example: 'user-uuid' })
+  @ApiProperty()
   userId: string;
 
-  @ApiProperty({ example: 'collection-uuid', required: false })
+  @ApiProperty({ required: false, nullable: true })
   noteCollectionId: string | null;
 
   constructor(partial: Partial<NoteEntity>) {

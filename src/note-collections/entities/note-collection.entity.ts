@@ -1,15 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { NoteCollection } from 'generated/prisma';
+import { NoteCollection } from '@prisma/client';
 import { NoteEntity } from '../../notes/entities/note.entity';
 
 export class NoteCollectionEntity implements NoteCollection {
-  @ApiProperty({ example: 'uuid-string' })
+  @ApiProperty()
   id: string;
 
-  @ApiProperty({ example: 'My Important Collection' })
+  @ApiProperty()
   title: string;
 
-  @ApiProperty({ example: 'user-uuid' })
+  @ApiProperty()
   userId: string;
 
   @ApiProperty({ type: [NoteEntity], required: false })
@@ -17,5 +17,8 @@ export class NoteCollectionEntity implements NoteCollection {
 
   constructor(partial: Partial<NoteCollectionEntity>) {
     Object.assign(this, partial);
+    if (partial.notes) {
+      this.notes = partial.notes.map((note) => new NoteEntity(note));
+    }
   }
 }

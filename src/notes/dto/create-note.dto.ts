@@ -10,24 +10,31 @@ import {
 
 export class CreateNoteDto {
   @ApiProperty({
-    example: 'My Important Note',
-    maxLength: 100,
+    example: 'My Note Title',
+    description: 'Note title',
     required: false,
   })
   @IsOptional()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  @Transform(({ value }: { value: string }) => value?.trim())
+  @Transform(({ value }) => value?.trim())
   title?: string;
 
-  @ApiProperty({ example: 'This is the content of my note' })
+  @ApiProperty({
+    example: 'This is the content of my note',
+    description: 'Note content',
+  })
   @IsString()
   @IsNotEmpty()
-  @Transform(({ value }: { value: string }) => value?.trim())
+  @Transform(({ value }) => value?.trim())
   description: string;
 
-  @ApiProperty({ example: 'collection-uuid', required: false })
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Note collection ID',
+    required: false,
+  })
   @IsOptional()
   @IsUUID()
   noteCollectionId?: string;

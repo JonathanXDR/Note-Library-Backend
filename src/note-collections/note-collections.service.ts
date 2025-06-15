@@ -1,22 +1,97 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { NoteCollection, Prisma } from 'generated/prisma';
-import { PrismaService } from 'src/prisma.service';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { NoteCollection, Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateNoteCollectionDto } from './dto/create-note-collection.dto';
 import { UpdateNoteCollectionDto } from './dto/update-note-collection.dto';
 
 @Injectable()
 export class NoteCollectionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {}
 
-  findAllByUserId(userId: string): Promise<NoteCollection[]> {
-    return this.prisma.noteCollection.findMany({
-      where: { userId },
-      include: { notes: true },
-      orderBy: { title: 'asc' },
+  async create(
+    userId: string,
+    createNoteCollectionDto: CreateNoteCollectionDto,
+  ): Promise<NoteCollection> {
+    const { noteIds, ...data } = createNoteCollectionDto;
+
+    return this.prisma.$transaction(async (tx) => {
+      // Create the collection
+      const collection = await tx.noteCollection.create({
+        data: {
+          ...data,
+          user: {
+            connect: { id: userId },
+          },
+        },
+        include: { notes: true },
+      });
+
+      // If noteIds are provided, update those notes to belong to this collection
+      if (noteIds && noteIds.length > 0) {
+        // Verify all notes belong to the user
+        const notes = await tx.note.findMany({
+          where: {
+            id: { in: noteIds },
+            userId,
+          },
+        });
+
+        if (notes.length !== noteIds.length) {
+          throw new BadRequestException(
+            'One or more notes not found or do not belong to you',
+          );
+        }
+
+        // Update notes to belong to this collection
+        await tx.note.updateMany({
+          where: {
+            id: { in: noteIds },
+            userId,
+          },
+          data: {
+            noteCollectionId: collection.id,
+          },
+        });
+
+        // Return collection with updated notes
+        return tx.noteCollection.findUnique({
+          where: { id: collection.id },
+          include: { notes: true },
+        });
+      }
+
+      return collection;
     });
   }
 
-  async findByIdAndUserId(id: string, userId: string): Promise<NoteCollection> {
+  async findAll(
+    userId: string,
+    params?: {
+      skip?: number;
+      take?: number;
+      where?: Prisma.NoteCollectionWhereInput;
+      orderBy?: Prisma.NoteCollectionOrderByWithRelationInput;
+    },
+  ): Promise<NoteCollection[]> {
+    const { skip, take, where, orderBy } = params || {};
+
+    return this.prisma.noteCollection.findMany({
+      skip,
+      take,
+      where: {
+        ...where,
+        userId,
+      },
+      orderBy: orderBy || { title: 'asc' },
+      include: { notes: true },
+    });
+  }
+
+  async findOne(id: string, userId: string): Promise<NoteCollection> {
     const collection = await this.prisma.noteCollection.findFirst({
       where: { id, userId },
       include: { notes: true },
@@ -29,119 +104,81 @@ export class NoteCollectionsService {
     return collection;
   }
 
-  async create(
-    userId: string,
-    createNoteCollectionDto: CreateNoteCollectionDto,
-  ): Promise<NoteCollection> {
-    const { noteIds, ...collectionData } = createNoteCollectionDto;
-
-    if (noteIds?.length) {
-      await this.validateNotesOwnership(noteIds, userId);
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      const collection = await tx.noteCollection.create({
-        data: {
-          ...collectionData,
-          user: {
-            connect: { id: userId },
-          },
-        },
-        include: { notes: true },
-      });
-
-      if (noteIds?.length) {
-        await tx.note.updateMany({
-          where: { id: { in: noteIds }, userId },
-          data: { noteCollectionId: collection.id },
-        });
-
-        const updatedCollection = await tx.noteCollection.findUnique({
-          where: { id: collection.id },
-          include: { notes: true },
-        });
-
-        return updatedCollection || collection;
-      }
-
-      return collection;
-    });
-  }
-
   async update(
     id: string,
     userId: string,
     updateNoteCollectionDto: UpdateNoteCollectionDto,
   ): Promise<NoteCollection> {
-    await this.findByIdAndUserId(id, userId);
+    await this.findOne(id, userId); // Check if collection exists and belongs to user
 
-    const { noteIds, ...collectionData } = updateNoteCollectionDto;
-
-    if (noteIds?.length) {
-      await this.validateNotesOwnership(noteIds, userId);
-    }
+    const { noteIds, ...data } = updateNoteCollectionDto;
 
     return this.prisma.$transaction(async (tx) => {
+      // Update collection data
       await tx.noteCollection.update({
         where: { id },
-        data: collectionData as Prisma.NoteCollectionUpdateInput,
+        data,
       });
 
+      // Handle note associations if noteIds is provided
       if (noteIds !== undefined) {
+        // Remove all notes from this collection
         await tx.note.updateMany({
           where: { noteCollectionId: id, userId },
           data: { noteCollectionId: null },
         });
 
+        // Add specified notes to this collection
         if (noteIds.length > 0) {
+          // Verify all notes belong to the user
+          const notes = await tx.note.findMany({
+            where: {
+              id: { in: noteIds },
+              userId,
+            },
+          });
+
+          if (notes.length !== noteIds.length) {
+            throw new BadRequestException(
+              'One or more notes not found or do not belong to you',
+            );
+          }
+
           await tx.note.updateMany({
-            where: { id: { in: noteIds }, userId },
-            data: { noteCollectionId: id },
+            where: {
+              id: { in: noteIds },
+              userId,
+            },
+            data: {
+              noteCollectionId: id,
+            },
           });
         }
       }
 
-      const updatedCollection = await tx.noteCollection.findUnique({
+      // Return updated collection with notes
+      return tx.noteCollection.findUnique({
         where: { id },
         include: { notes: true },
       });
-
-      if (!updatedCollection) {
-        throw new NotFoundException('Note collection not found after update');
-      }
-
-      return updatedCollection;
     });
   }
 
   async remove(id: string, userId: string): Promise<NoteCollection> {
-    const collection = await this.findByIdAndUserId(id, userId);
+    const collection = await this.findOne(id, userId); // Check if collection exists and belongs to user
 
     return this.prisma.$transaction(async (tx) => {
+      // Remove association from all notes in this collection
       await tx.note.updateMany({
         where: { noteCollectionId: id, userId },
         data: { noteCollectionId: null },
       });
 
-      await tx.noteCollection.delete({
+      // Delete the collection
+      return tx.noteCollection.delete({
         where: { id },
+        include: { notes: true },
       });
-
-      return collection;
     });
-  }
-
-  private async validateNotesOwnership(
-    noteIds: string[],
-    userId: string,
-  ): Promise<void> {
-    const notes = await this.prisma.note.findMany({
-      where: { id: { in: noteIds }, userId },
-      select: { id: true },
-    });
-
-    if (notes.length !== noteIds.length) {
-      throw new NotFoundException('One or more notes not found');
-    }
   }
 }

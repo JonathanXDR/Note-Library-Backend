@@ -3,8 +3,8 @@ import { ApiTags } from '@nestjs/swagger';
 import { User } from 'generated/prisma';
 import { AppService } from './app.service';
 import { AuthService } from './auth/auth.service';
+import { CurrentUser } from './auth/decorators/current-user.decorator';
 import { LocalAuthGuard } from './auth/guards/local-auth.guard';
-import { CurrentUser } from './decorators/current-user.decorator';
 
 @Controller()
 export class AppController {

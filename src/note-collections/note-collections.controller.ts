@@ -1,54 +1,73 @@
 import {
   Body,
-  ClassSerializerInterceptor,
   Controller,
+  DefaultValuePipe,
   Delete,
   Get,
-  HttpCode,
-  HttpStatus,
   Param,
+  ParseIntPipe,
   ParseUUIDPipe,
+  Patch,
   Post,
-  Put,
-  UseGuards,
-  UseInterceptors,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
-  ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { User } from 'generated/prisma';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../decorators/current-user.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateNoteCollectionDto } from './dto/create-note-collection.dto';
 import { UpdateNoteCollectionDto } from './dto/update-note-collection.dto';
 import { NoteCollectionEntity } from './entities/note-collection.entity';
 import { NoteCollectionsService } from './note-collections.service';
 
 @ApiTags('note-collections')
-@Controller('note-collections')
-@UseGuards(JwtAuthGuard)
-@UseInterceptors(ClassSerializerInterceptor)
 @ApiBearerAuth()
+@Controller('note-collections')
 export class NoteCollectionsController {
   constructor(
     private readonly noteCollectionsService: NoteCollectionsService,
   ) {}
 
+  @Post()
+  @ApiOperation({ summary: 'Create a new note collection' })
+  @ApiResponse({
+    status: 201,
+    description: 'Note collection created successfully',
+    type: NoteCollectionEntity,
+  })
+  async create(
+    @CurrentUser('id') userId: string,
+    @Body() createNoteCollectionDto: CreateNoteCollectionDto,
+  ): Promise<NoteCollectionEntity> {
+    const collection = await this.noteCollectionsService.create(
+      userId,
+      createNoteCollectionDto,
+    );
+    return new NoteCollectionEntity(collection);
+  }
+
   @Get()
   @ApiOperation({ summary: 'Get all note collections for current user' })
+  @ApiQuery({ name: 'skip', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
   @ApiResponse({
     status: 200,
-    description: 'List of user note collections',
+    description: 'List of note collections',
     type: [NoteCollectionEntity],
   })
-  async findAll(@CurrentUser() user: User): Promise<NoteCollectionEntity[]> {
-    const collections = await this.noteCollectionsService.findAllByUserId(
-      user.id,
-    );
+  async findAll(
+    @CurrentUser('id') userId: string,
+    @Query('skip', new DefaultValuePipe(0), ParseIntPipe) skip: number,
+    @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
+  ): Promise<NoteCollectionEntity[]> {
+    const collections = await this.noteCollectionsService.findAll(userId, {
+      skip,
+      take,
+    });
     return collections.map(
       (collection) => new NoteCollectionEntity(collection),
     );
@@ -56,70 +75,43 @@ export class NoteCollectionsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get note collection by ID' })
-  @ApiParam({ name: 'id', description: 'Note Collection UUID' })
   @ApiResponse({
     status: 200,
     description: 'Note collection found',
     type: NoteCollectionEntity,
   })
   @ApiResponse({ status: 404, description: 'Note collection not found' })
-  async findById(
-    @CurrentUser() user: User,
+  async findOne(
+    @CurrentUser('id') userId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<NoteCollectionEntity> {
-    const collection = await this.noteCollectionsService.findByIdAndUserId(
-      id,
-      user.id,
-    );
+    const collection = await this.noteCollectionsService.findOne(id, userId);
     return new NoteCollectionEntity(collection);
   }
 
-  @Post()
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create new note collection' })
-  @ApiResponse({
-    status: 201,
-    description: 'Note collection created successfully',
-    type: NoteCollectionEntity,
-  })
-  @ApiResponse({ status: 400, description: 'Invalid input data' })
-  async create(
-    @CurrentUser() user: User,
-    @Body() createNoteCollectionDto: CreateNoteCollectionDto,
-  ): Promise<NoteCollectionEntity> {
-    const collection = await this.noteCollectionsService.create(
-      user.id,
-      createNoteCollectionDto,
-    );
-    return new NoteCollectionEntity(collection);
-  }
-
-  @Put(':id')
-  @ApiOperation({ summary: 'Update note collection by ID' })
-  @ApiParam({ name: 'id', description: 'Note Collection UUID' })
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update note collection' })
   @ApiResponse({
     status: 200,
     description: 'Note collection updated successfully',
     type: NoteCollectionEntity,
   })
-  @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 404, description: 'Note collection not found' })
   async update(
-    @CurrentUser() user: User,
+    @CurrentUser('id') userId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateNoteCollectionDto: UpdateNoteCollectionDto,
   ): Promise<NoteCollectionEntity> {
     const collection = await this.noteCollectionsService.update(
       id,
-      user.id,
+      userId,
       updateNoteCollectionDto,
     );
     return new NoteCollectionEntity(collection);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete note collection by ID' })
-  @ApiParam({ name: 'id', description: 'Note Collection UUID' })
+  @ApiOperation({ summary: 'Delete note collection' })
   @ApiResponse({
     status: 200,
     description: 'Note collection deleted successfully',
@@ -127,10 +119,10 @@ export class NoteCollectionsController {
   })
   @ApiResponse({ status: 404, description: 'Note collection not found' })
   async remove(
-    @CurrentUser() user: User,
+    @CurrentUser('id') userId: string,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<NoteCollectionEntity> {
-    const collection = await this.noteCollectionsService.remove(id, user.id);
+    const collection = await this.noteCollectionsService.remove(id, userId);
     return new NoteCollectionEntity(collection);
   }
 }

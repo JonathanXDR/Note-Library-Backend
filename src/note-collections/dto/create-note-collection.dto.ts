@@ -10,16 +10,19 @@ import {
 } from 'class-validator';
 
 export class CreateNoteCollectionDto {
-  @ApiProperty({ example: 'My Important Collection', maxLength: 100 })
+  @ApiProperty({
+    example: 'My Collection',
+    description: 'Collection title',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  @Transform(({ value }: { value: string }) => value?.trim())
+  @Transform(({ value }) => value?.trim())
   title: string;
 
   @ApiProperty({
-    example: ['note-uuid-1', 'note-uuid-2'],
-    description: 'Array of note IDs to include in collection',
+    example: ['123e4567-e89b-12d3-a456-426614174000'],
+    description: 'Array of note IDs to add to collection',
     required: false,
   })
   @IsOptional()

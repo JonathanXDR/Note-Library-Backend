@@ -1,30 +1,30 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { User } from '@prisma/client';
 import { Exclude } from 'class-transformer';
-import { User } from 'generated/prisma';
 
-export class UserEntity implements Omit<User, 'password'> {
-  @ApiProperty({ example: 'uuid-string' })
+export class UserEntity implements User {
+  @ApiProperty()
   id: string;
 
-  @ApiProperty({ example: 'john_doe' })
+  @ApiProperty()
   username: string;
 
   @Exclude()
   password: string;
 
-  @ApiProperty({ example: 'Doe' })
-  lastName: string;
-
-  @ApiProperty({ example: 'John' })
+  @ApiProperty()
   firstName: string;
 
-  @ApiProperty({ example: 25, required: false })
+  @ApiProperty()
+  lastName: string;
+
+  @ApiProperty({ required: false, nullable: true })
   age: number | null;
 
-  @ApiProperty({ example: 'male', required: false })
+  @ApiProperty({ required: false, nullable: true })
   gender: string | null;
 
-  @ApiProperty({ example: 'user', enum: ['user', 'admin'] })
+  @ApiProperty()
   role: string;
 
   constructor(partial: Partial<UserEntity>) {

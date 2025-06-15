@@ -1,137 +1,125 @@
 import {
   Body,
-  ClassSerializerInterceptor,
   Controller,
+  DefaultValuePipe,
   Delete,
+  ForbiddenException,
   Get,
-  HttpCode,
-  HttpStatus,
   Param,
+  ParseIntPipe,
   ParseUUIDPipe,
+  Patch,
   Post,
-  Put,
-  UseGuards,
-  UseInterceptors,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
-  ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { User } from 'generated/prisma';
-import { RolesGuard } from 'src/auth/guards/roles.guard';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../decorators/current-user.decorator';
-import { Roles } from '../decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../auth/enums/role.enum';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserEntity } from './entities/user.entity';
 import { UsersService } from './users.service';
 
 @ApiTags('users')
+@ApiBearerAuth()
 @Controller('users')
-@UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all users (Admin only)' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of all users',
-    type: [UserEntity],
-  })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
-  async findAll(): Promise<UserEntity[]> {
-    const users = await this.usersService.findAll();
-    return users.map((user) => new UserEntity(user));
-  }
-
-  @Get('me')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({
-    status: 200,
-    description: 'Current user profile',
-    type: UserEntity,
-  })
-  async getCurrentUser(@CurrentUser() user: User): Promise<UserEntity> {
-    const foundUser = await this.usersService.findById(user.id);
-    return new UserEntity(foundUser);
-  }
-
-  @Get(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get user by ID (Admin only)' })
-  @ApiParam({ name: 'id', description: 'User UUID' })
-  @ApiResponse({
-    status: 200,
-    description: 'User found',
-    type: UserEntity,
-  })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
-  async findById(@Param('id', ParseUUIDPipe) id: string): Promise<UserEntity> {
-    const user = await this.usersService.findById(id);
-    return new UserEntity(user);
-  }
-
   @Post()
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create new user' })
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Create a new user (Admin only)' })
   @ApiResponse({
     status: 201,
     description: 'User created successfully',
     type: UserEntity,
   })
-  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 409, description: 'Username already exists' })
   async create(@Body() createUserDto: CreateUserDto): Promise<UserEntity> {
     const user = await this.usersService.create(createUserDto);
     return new UserEntity(user);
   }
 
-  @Put('me')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @Get()
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Get all users (Admin only)' })
+  @ApiQuery({ name: 'skip', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'List of users',
+    type: [UserEntity],
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async findAll(
+    @Query('skip', new DefaultValuePipe(0), ParseIntPipe) skip: number,
+    @Query('take', new DefaultValuePipe(10), ParseIntPipe) take: number,
+  ): Promise<UserEntity[]> {
+    const users = await this.usersService.findAll({ skip, take });
+    return users.map((user) => new UserEntity(user));
+  }
+
+  @Get('profile')
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user profile',
+    type: UserEntity,
+  })
+  async getProfile(@CurrentUser('id') userId: string): Promise<UserEntity> {
+    const user = await this.usersService.findById(userId);
+    return new UserEntity(user);
+  }
+
+  @Get(':id')
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Get user by ID (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'User found',
+    type: UserEntity,
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<UserEntity> {
+    const user = await this.usersService.findById(id);
+    return new UserEntity(user);
+  }
+
+  @Patch('profile')
   @ApiOperation({ summary: 'Update current user profile' })
   @ApiResponse({
     status: 200,
-    description: 'User updated successfully',
+    description: 'Profile updated successfully',
     type: UserEntity,
   })
-  @ApiResponse({ status: 400, description: 'Invalid input data' })
-  async updateCurrentUser(
-    @CurrentUser() user: User,
+  async updateProfile(
+    @CurrentUser('id') userId: string,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<UserEntity> {
-    const updatedUser = await this.usersService.update(user.id, updateUserDto);
-    return new UserEntity(updatedUser);
+    const user = await this.usersService.update(userId, updateUserDto);
+    return new UserEntity(user);
   }
 
-  @Put(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
+  @Patch(':id')
+  @Roles(Role.Admin)
   @ApiOperation({ summary: 'Update user by ID (Admin only)' })
-  @ApiParam({ name: 'id', description: 'User UUID' })
   @ApiResponse({
     status: 200,
     description: 'User updated successfully',
     type: UserEntity,
   })
-  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
-  async updateById(
+  async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<UserEntity> {
@@ -139,36 +127,24 @@ export class UsersController {
     return new UserEntity(user);
   }
 
-  @Delete('me')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete current user account' })
-  @ApiResponse({
-    status: 200,
-    description: 'User deleted successfully',
-    type: UserEntity,
-  })
-  async deleteCurrentUser(@CurrentUser() user: User): Promise<UserEntity> {
-    const deletedUser = await this.usersService.remove(user.id);
-    return new UserEntity(deletedUser);
-  }
-
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete user by ID (Admin only)' })
-  @ApiParam({ name: 'id', description: 'User UUID' })
+  @ApiOperation({ summary: 'Delete user' })
   @ApiResponse({
     status: 200,
     description: 'User deleted successfully',
     type: UserEntity,
   })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
-  async deleteById(
+  async remove(
+    @CurrentUser() currentUser: any,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<UserEntity> {
+    // Users can delete their own account, admins can delete any account
+    if (currentUser.id !== id && currentUser.role !== Role.Admin) {
+      throw new ForbiddenException('You can only delete your own account');
+    }
+
     const user = await this.usersService.remove(id);
     return new UserEntity(user);
   }

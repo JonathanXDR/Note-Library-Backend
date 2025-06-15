@@ -3,44 +3,55 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, User } from 'generated/prisma';
-import { PrismaService } from 'src/prisma.service';
+import { Prisma, User } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {}
 
-  findAll(): Promise<User[]> {
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    try {
+      return await this.prisma.user.create({
+        data: {
+          ...createUserDto,
+          role: 'user',
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException('Username already exists');
+        }
+      }
+      throw error;
+    }
+  }
+
+  async findAll(params?: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.UserWhereUniqueInput;
+    where?: Prisma.UserWhereInput;
+    orderBy?: Prisma.UserOrderByWithRelationInput;
+  }): Promise<User[]> {
+    const { skip, take, cursor, where, orderBy } = params || {};
+
     return this.prisma.user.findMany({
-      select: {
-        id: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        age: true,
-        gender: true,
-        role: true,
-        password: false,
-      },
-    }) as Promise<User[]>;
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+    });
   }
 
   async findById(id: string): Promise<User> {
-    const user = (await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
-      select: {
-        id: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        age: true,
-        gender: true,
-        role: true,
-        password: false,
-      },
-    })) as User | null;
+    });
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
@@ -49,87 +60,35 @@ export class UsersService {
     return user;
   }
 
-  async findByUsername(username: string): Promise<User> {
-    const user = await this.prisma.user.findUnique({
+  async findByUsername(username: string): Promise<User | null> {
+    return this.prisma.user.findUnique({
       where: { username },
     });
-
-    if (!user) {
-      throw new NotFoundException(`User with username ${username} not found`);
-    }
-
-    return user;
-  }
-
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { username: createUserDto.username },
-    });
-
-    if (existingUser) {
-      throw new ConflictException(
-        `Username ${createUserDto.username} already exists`,
-      );
-    }
-
-    const user = (await this.prisma.user.create({
-      data: {
-        ...createUserDto,
-        role: 'user',
-      } as Prisma.UserCreateInput,
-      select: {
-        id: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        age: true,
-        gender: true,
-        role: true,
-        password: false,
-      },
-    })) as User;
-
-    return user;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
-    await this.findById(id);
+    await this.findById(id); // Check if user exists
 
-    const user = (await this.prisma.user.update({
-      where: { id },
-      data: updateUserDto as Prisma.UserUpdateInput,
-      select: {
-        id: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        age: true,
-        gender: true,
-        role: true,
-        password: false,
-      },
-    })) as User;
-
-    return user;
+    try {
+      return await this.prisma.user.update({
+        where: { id },
+        data: updateUserDto,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException('Username already exists');
+        }
+      }
+      throw error;
+    }
   }
 
   async remove(id: string): Promise<User> {
-    await this.findById(id);
+    await this.findById(id); // Check if user exists
 
-    const user = (await this.prisma.user.delete({
+    return this.prisma.user.delete({
       where: { id },
-      select: {
-        id: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        age: true,
-        gender: true,
-        role: true,
-        password: false,
-      },
-    })) as User;
-
-    return user;
+    });
   }
 }
